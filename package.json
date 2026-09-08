@@ -1,0 +1,31 @@
+{
+  "name": "fantasy-bets",
+  "version": "1.0.0",
+  "description": "Casual betting app for Liga MX with Hexagonal Architecture and Vue 3",
+  "type": "module",
+  "scripts": {
+    "init-db": "node server/src/shared/infrastructure/db/initDb.js",
+    "server": "node server/src/app.js",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node server/tests/e2e.test.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.1.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  }
+}
