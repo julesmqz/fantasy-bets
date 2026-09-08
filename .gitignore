@@ -28,3 +28,4 @@ dist-ssr
 *.sqlite
 *.sqlite3
 .env
+.firebase

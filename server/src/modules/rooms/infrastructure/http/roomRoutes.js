@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { SQLiteRoomRepository } from '../SQLiteRoomRepository.js';
-import { SQLiteMatchRepository } from '../../../matches/infrastructure/SQLiteMatchRepository.js';
+import { FirestoreRoomRepository } from '../FirestoreRoomRepository.js';
+import { FirestoreMatchRepository } from '../../../matches/infrastructure/FirestoreMatchRepository.js';
 import { LigaMXSoccerEngine } from '../../../matches/infrastructure/LigaMXSoccerEngine.js';
 import { CreateRoom } from '../../application/CreateRoom.js';
 import { JoinRoomByCode } from '../../application/JoinRoomByCode.js';
@@ -13,8 +13,8 @@ import { authMiddleware } from '../../../../shared/infrastructure/http/authMiddl
 export function createRoomRouter() {
   const router = Router();
 
-  const roomRepository = new SQLiteRoomRepository();
-  const matchRepository = new SQLiteMatchRepository();
+  const roomRepository = new FirestoreRoomRepository();
+  const matchRepository = new FirestoreMatchRepository();
   const sportEngine = new LigaMXSoccerEngine();
 
   const createRoom = new CreateRoom({ roomRepository, matchRepository, sportEngine });

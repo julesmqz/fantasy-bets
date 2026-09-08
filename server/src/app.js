@@ -1,14 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { initializeDatabase } from './shared/infrastructure/db/initDb.js';
 import { createApiRouter } from './shared/infrastructure/http/apiRouter.js';
 import { errorHandler } from './shared/infrastructure/http/errorHandler.js';
 
 dotenv.config();
-
-// Ensure database schema is ready
-initializeDatabase();
 
 export const app = express();
 

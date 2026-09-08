@@ -1,5 +1,5 @@
 import { NotFoundError, ForbiddenError, ConflictError } from '../../../shared/domain/errors/index.js';
-import { db } from '../../../shared/infrastructure/db/connection.js';
+import { db } from '../../../shared/infrastructure/db/firestore.js';
 
 export class SimulateAndSettleRoom {
   constructor({ roomRepository, matchRepository, betRepository, sportEngine, database = db }) {
@@ -11,12 +11,15 @@ export class SimulateAndSettleRoom {
   }
 
   async execute({ roomId, userId }) {
-    const room = await this.roomRepository.findById(roomId);
+    const rId = String(roomId);
+    const uId = String(userId);
+
+    const room = await this.roomRepository.findById(rId);
     if (!room) {
       throw new NotFoundError('Room not found');
     }
 
-    if (room.creatorId !== userId) {
+    if (String(room.creatorId) !== uId) {
       throw new ForbiddenError('Only the room creator can simulate and settle the tournament');
     }
 
@@ -24,77 +27,91 @@ export class SimulateAndSettleRoom {
       throw new ConflictError('Room is already completed');
     }
 
-    // Atomic SQLite Transaction
-    const settleTransaction = this.db.transaction(() => {
-      // 1. Fetch matches
-      const getMatchesStmt = this.db.prepare('SELECT * FROM matches WHERE room_id = ?');
-      const matches = getMatchesStmt.all(roomId);
+    // Atomic Firestore Transaction: ALL READS FIRST, THEN ALL WRITES
+    await this.db.runTransaction(async (transaction) => {
+      const roomRef = this.db.collection('rooms').doc(rId);
+      const roomDoc = await transaction.get(roomRef);
 
-      const updateMatchStmt = this.db.prepare(`
-        UPDATE matches
-        SET winner = ?, status = 'finished'
-        WHERE id = ?
-      `);
-
-      const matchWinners = new Map();
-      for (const m of matches) {
-        const winner = this.sportEngine.simulateWinner({
-          homeTeam: m.home_team,
-          awayTeam: m.away_team
-        });
-        updateMatchStmt.run(winner, m.id);
-        matchWinners.set(m.id, winner);
+      if (!roomDoc.exists) {
+        throw new NotFoundError('Room not found');
       }
 
-      // 2. Mark room completed
-      const updateRoomStmt = this.db.prepare(`
-        UPDATE rooms
-        SET status = 'completed'
-        WHERE id = ?
-      `);
-      updateRoomStmt.run(roomId);
+      if (roomDoc.data().status === 'completed') {
+        throw new ConflictError('Room is already completed');
+      }
 
-      // 3. Fetch all bets
-      const getBetsStmt = this.db.prepare('SELECT * FROM bets WHERE room_id = ?');
-      const bets = getBetsStmt.all(roomId);
+      // 1. READS: Fetch matches, bets, members
+      const matchesQuery = this.db.collection('matches').where('room_id', '==', rId);
+      const betsQuery = this.db.collection('bets').where('room_id', '==', rId);
+      const membersQuery = this.db.collection('room_members').where('room_id', '==', rId);
 
-      const updateBetStmt = this.db.prepare(`
-        UPDATE bets
-        SET points_awarded = ?
-        WHERE id = ?
-      `);
+      const [matchesSnapshot, betsSnapshot, membersSnapshot] = await Promise.all([
+        transaction.get(matchesQuery),
+        transaction.get(betsQuery),
+        transaction.get(membersQuery)
+      ]);
+
+      // 2. IN-MEMORY COMPUTATIONS
+      const matchWinners = new Map();
+      const matchUpdates = [];
+
+      for (const matchDoc of matchesSnapshot.docs) {
+        const m = matchDoc.data();
+        const winner = this.sportEngine.simulateWinner({
+          homeTeam: m.home_team || m.homeTeam,
+          awayTeam: m.away_team || m.awayTeam
+        });
+        matchWinners.set(matchDoc.id, winner);
+        matchUpdates.push({ ref: matchDoc.ref, winner });
+      }
 
       const userScores = new Map();
-      for (const b of bets) {
-        const actualWinner = matchWinners.get(b.match_id);
-        const hit = actualWinner && b.predicted_winner === actualWinner;
-        const points = hit ? 1 : 0;
-        updateBetStmt.run(points, b.id);
+      const betUpdates = [];
 
-        const currentScore = userScores.get(b.user_id) || 0;
-        userScores.set(b.user_id, currentScore + points);
+      for (const betDoc of betsSnapshot.docs) {
+        const b = betDoc.data();
+        const mId = String(b.match_id || b.matchId);
+        const actualWinner = matchWinners.get(mId);
+        const predWinner = b.predicted_winner || b.predictedWinner;
+        const hit = actualWinner && predWinner === actualWinner;
+        const points = hit ? 1 : 0;
+
+        betUpdates.push({ ref: betDoc.ref, points });
+
+        const bUserId = String(b.user_id || b.userId);
+        const currentScore = userScores.get(bUserId) || 0;
+        userScores.set(bUserId, currentScore + points);
       }
 
-      // 4. Update room_members scores
-      const getMembersStmt = this.db.prepare('SELECT user_id FROM room_members WHERE room_id = ?');
-      const members = getMembersStmt.all(roomId);
+      const memberUpdates = [];
+      for (const memberDoc of membersSnapshot.docs) {
+        const memData = memberDoc.data();
+        const memUserId = String(memData.user_id || memData.userId);
+        const total = userScores.get(memUserId) || 0;
+        memberUpdates.push({ ref: memberDoc.ref, score: total });
+      }
 
-      const updateScoreStmt = this.db.prepare(`
-        UPDATE room_members
-        SET score = ?
-        WHERE room_id = ? AND user_id = ?
-      `);
+      // 3. WRITES
+      // Update room status
+      transaction.update(roomRef, { status: 'completed' });
 
-      for (const m of members) {
-        const total = userScores.get(m.user_id) || 0;
-        updateScoreStmt.run(total, roomId, m.user_id);
+      // Update matches
+      for (const update of matchUpdates) {
+        transaction.update(update.ref, { winner: update.winner, status: 'finished' });
+      }
+
+      // Update bets points
+      for (const update of betUpdates) {
+        transaction.update(update.ref, { points_awarded: update.points });
+      }
+
+      // Update member scores
+      for (const update of memberUpdates) {
+        transaction.update(update.ref, { score: update.score });
       }
     });
 
-    // Execute atomic transaction
-    settleTransaction();
-
-    const updatedRoom = await this.roomRepository.findById(roomId);
+    const updatedRoom = await this.roomRepository.findById(rId);
     return updatedRoom.toJSON();
   }
 }
