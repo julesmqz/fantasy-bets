@@ -1,8 +1,8 @@
 import { UnauthorizedError } from '../../domain/errors/index.js';
-import { SQLiteUserRepository } from '../../../modules/users/infrastructure/SQLiteUserRepository.js';
+import { FirestoreUserRepository } from '../../../modules/users/infrastructure/FirestoreUserRepository.js';
 import { JwtTokenService } from '../../../modules/users/infrastructure/JwtTokenService.js';
 
-const userRepository = new SQLiteUserRepository();
+const userRepository = new FirestoreUserRepository();
 const tokenService = new JwtTokenService();
 
 export async function authMiddleware(req, res, next) {

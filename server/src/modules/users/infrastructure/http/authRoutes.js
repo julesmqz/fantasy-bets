@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { SQLiteUserRepository } from '../SQLiteUserRepository.js';
+import { FirestoreUserRepository } from '../FirestoreUserRepository.js';
 import { BcryptHashService } from '../BcryptHashService.js';
 import { JwtTokenService } from '../JwtTokenService.js';
 import { RegisterUser } from '../../application/RegisterUser.js';
@@ -11,7 +11,7 @@ import { authMiddleware } from '../../../../shared/infrastructure/http/authMiddl
 export function createAuthRouter() {
   const router = Router();
 
-  const userRepository = new SQLiteUserRepository();
+  const userRepository = new FirestoreUserRepository();
   const hashService = new BcryptHashService();
   const tokenService = new JwtTokenService();
 

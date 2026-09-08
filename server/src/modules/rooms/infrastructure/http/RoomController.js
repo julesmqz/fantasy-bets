@@ -47,7 +47,7 @@ export class RoomController {
 
   getById = async (req, res, next) => {
     try {
-      const roomId = parseInt(req.params.roomId, 10);
+      const roomId = req.params.roomId;
       const room = await this.getRoomById.execute({
         roomId,
         userId: req.user.id
@@ -60,7 +60,7 @@ export class RoomController {
 
   getMatches = async (req, res, next) => {
     try {
-      const roomId = parseInt(req.params.roomId, 10);
+      const roomId = req.params.roomId;
       const matches = await this.getRoomMatches.execute({
         roomId
       });

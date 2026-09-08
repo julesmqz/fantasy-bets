@@ -1,5 +1,5 @@
+process.env.USE_IN_MEMORY_FIRESTORE = process.env.USE_IN_MEMORY_FIRESTORE || 'true';
 import { app } from '../src/app.js';
-import { db } from '../src/shared/infrastructure/db/connection.js';
 
 async function runFullE2ETestSuite() {
   const server = app.listen(0);

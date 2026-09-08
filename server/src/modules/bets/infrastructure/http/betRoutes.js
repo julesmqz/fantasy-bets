@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { SQLiteBetRepository } from '../SQLiteBetRepository.js';
-import { SQLiteRoomRepository } from '../../../rooms/infrastructure/SQLiteRoomRepository.js';
-import { SQLiteMatchRepository } from '../../../matches/infrastructure/SQLiteMatchRepository.js';
+import { FirestoreBetRepository } from '../FirestoreBetRepository.js';
+import { FirestoreRoomRepository } from '../../../rooms/infrastructure/FirestoreRoomRepository.js';
+import { FirestoreMatchRepository } from '../../../matches/infrastructure/FirestoreMatchRepository.js';
 import { LigaMXSoccerEngine } from '../../../matches/infrastructure/LigaMXSoccerEngine.js';
 import { PlaceOrUpdateBet } from '../../application/PlaceOrUpdateBet.js';
 import { GetUserRoomBets } from '../../application/GetUserRoomBets.js';
@@ -13,9 +13,9 @@ import { authMiddleware } from '../../../../shared/infrastructure/http/authMiddl
 export function createBetRouter() {
   const router = Router({ mergeParams: true });
 
-  const betRepository = new SQLiteBetRepository();
-  const roomRepository = new SQLiteRoomRepository();
-  const matchRepository = new SQLiteMatchRepository();
+  const betRepository = new FirestoreBetRepository();
+  const roomRepository = new FirestoreRoomRepository();
+  const matchRepository = new FirestoreMatchRepository();
   const sportEngine = new LigaMXSoccerEngine();
 
   const placeOrUpdateBet = new PlaceOrUpdateBet({ betRepository, roomRepository, matchRepository });

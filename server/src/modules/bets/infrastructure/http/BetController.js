@@ -8,7 +8,7 @@ export class BetController {
 
   placeBet = async (req, res, next) => {
     try {
-      const roomId = parseInt(req.params.roomId, 10);
+      const roomId = req.params.roomId;
       const { match_id, predicted_winner } = req.body;
       const bet = await this.placeOrUpdateBetUseCase.execute({
         roomId,
@@ -24,7 +24,7 @@ export class BetController {
 
   getMyBets = async (req, res, next) => {
     try {
-      const roomId = parseInt(req.params.roomId, 10);
+      const roomId = req.params.roomId;
       const bets = await this.getUserRoomBetsUseCase.execute({
         roomId,
         userId: req.user.id
@@ -37,7 +37,7 @@ export class BetController {
 
   simulate = async (req, res, next) => {
     try {
-      const roomId = parseInt(req.params.roomId, 10);
+      const roomId = req.params.roomId;
       const room = await this.simulateAndSettleRoomUseCase.execute({
         roomId,
         userId: req.user.id
@@ -50,7 +50,7 @@ export class BetController {
 
   getLeaderboard = async (req, res, next) => {
     try {
-      const roomId = parseInt(req.params.roomId, 10);
+      const roomId = req.params.roomId;
       const leaderboard = await this.getLeaderboardUseCase.execute({
         roomId
       });
