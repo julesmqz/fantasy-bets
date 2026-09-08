@@ -1,6 +1,7 @@
 # Fantasy Bets
 
 Casual betting application for Liga MX featuring Hexagonal Architecture (Ports and Adapters) on the backend and Vue 3 on the frontend.
+[Open Fantasy Bets](https://fantasy-bets-8a009.web.app/)
 
 ---
 
